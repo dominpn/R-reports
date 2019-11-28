@@ -1,0 +1,38 @@
+---
+title: "Dokumentacja - język R"
+author: "Dominik Krystkowiak Łukasz Śmierzchalski"
+date: "24 11 2019"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+actors_data <- read.table(file = "https://people.sc.fsu.edu/~jburkardt/data/csv/oscar_age_male.csv", 
+          sep=",", header=TRUE)
+
+summary(actors_data["Age"])
+
+actress_data <- read.table(file = "https://people.sc.fsu.edu/~jburkardt/data/csv/oscar_age_female.csv", 
+          sep=",", header=TRUE)
+
+summary(actress_data["Age"])
+
+merged_data <- dplyr::inner_join(actors_data, actress_data, by = "Year")
+
+head(merged_data)
+
+ggplot(merged_data, aes(Year)) + 
+  geom_line(aes(y = Age.x, colour = "Wiek zdobywcy Oscara")) + 
+  geom_line(aes(y = Age.y, colour = "Wiek zdobywczyni Oscara"))
+
+boxplot(merged_data[, c("Age.x", "Age.y")])
+```
