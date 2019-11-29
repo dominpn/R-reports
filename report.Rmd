@@ -35,4 +35,48 @@ ggplot(merged_data, aes(Year)) +
   geom_line(aes(y = Age.y, colour = "Wiek zdobywczyni Oscara"))
 
 boxplot(merged_data[, c("Age.x", "Age.y")])
+
+#start histogram
+#http://www.sthda.com/english/wiki/ggplot2-histogram-plot-quick-start-guide-r-software-and-data-visualization
+data_f <- data.frame(
+  sex= "F",  
+  age=c(actress_data[,"Age"])
+)
+data_m <- data.frame(
+  sex="M" ,  
+  age=c(actors_data[,"Age"])
+)
+
+merged_data_histogram = merge(data_f, data_m, all=TRUE)
+head(merged_data_histogram)
+
+library(plyr)
+
+mu <- ddply(merged_data_histogram, "sex", summarise, grp.mean=mean(age))
+print(mu)
+
+ggplot(merged_data_histogram, aes(x=age, fill=sex, color=sex, y=..density..)) +
+  geom_histogram( alpha=0.5, position="identity", binwidth=2)+
+  geom_vline(data=mu, aes(xintercept=grp.mean, color=sex),
+             linetype="dashed")+
+  geom_density(alpha=.1, fill="#FFFFFF") 
+
+#end histogram
+
+#start web scraping
+#https://www.freecodecamp.org/news/an-introduction-to-web-scraping-using-r-40284110c848/
+library(xml2)
+library(rvest)
+library(stringr)
+
+url <- "https://www.amazon.in/OnePlus-Mirror-Black-64GB-Memory/dp/B0756Z43QS?tag=googinhydr18418-21&tag=googinkenshoo-21&ascsubtag=aee9a916-6acd-4409-92ca-3bdbeb549f80"
+
+webpage <-  read_html(url)
+print(webpage)
+title_html <- html_nodes(webpage, "#title")
+title <- html_text(title_html)
+head(title)
+
+#end web scraping
+
 ```
