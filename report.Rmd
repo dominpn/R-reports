@@ -10,33 +10,104 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r}
+library(plyr)
 library(ggplot2)
 library(dplyr)
 
+
+library(xml2)
+library(rvest)
+library(stringr)
+```
+
+![](http://1.bp.blogspot.com/-njoZpW5la84/UwxaQO0KrGI/AAAAAAAAIoE/OdyIRHCTVXY/s1600/oscar-3.jpg)
+
+# Zdobywcy Oscara
+
+Definicja nagród Oscara z Wikipedii:
+
+> Nagroda Akademii Filmowej, znana też jako Oscar – nagroda przyznawana corocznie przez Amerykańską Akademię Sztuki i Wiedzy Filmowej w dziedzinie filmu.
+
+Dane do analizy zostały pobrane ze strony https://people.sc.fsu.edu/~jburkardt/data/csv
+
+## Wczytanie danych
+
+Wczytanie danych odbywa się przy pomocy funkcji __read.table__ z odpowiednimi parametrami:
+
+- _file_ - źródło danych
+
+- _sep_ - separator
+
+- _header_ - czy pierwszy wiersz ma być uznany za nagłówek
+
+Funkcja __summary__ pozwala na wypisanie podsumowania zawierającego wartość minimalną zbioru, 1 kwartyl, medianę, średnią, 3 kwartyl oraz wartość maksymalną.
+
+Wczytanie danych dla aktorów oraz wyświetlenie podsumowania dla ich wieku w momencie zdobycia nagrody Oscara.
+
+```{r load_actors}
 actors_data <- read.table(file = "https://people.sc.fsu.edu/~jburkardt/data/csv/oscar_age_male.csv", 
           sep=",", header=TRUE)
 
 summary(actors_data["Age"])
 
+min_actors <- actors_data[which.min(actors_data$Age),]
+max_actors <- actors_data[which.max(actors_data$Age),]
+```
+
+Info | Rok uzyskania Oscara  | Nazwisko | Film | Wiek 
+------------- | ------------- | ------------- | ------------- | ------------- 
+Namłodszy | `r min_actors["Year"]` | `r min_actors["Name"]` | `r min_actors["Movie"]` | `r min_actors["Age"]`
+Najstarszy | `r max_actors["Year"]` | `r max_actors["Name"]` | `r max_actors["Movie"]` | `r max_actors["Age"]`
+
+
+To samo zostało wykonane dla aktorek, które zdobyły Oscara.
+
+```{r load_actress}
 actress_data <- read.table(file = "https://people.sc.fsu.edu/~jburkardt/data/csv/oscar_age_female.csv", 
           sep=",", header=TRUE)
 
 summary(actress_data["Age"])
 
+min_actress <- actress_data[which.min(actress_data$Age),]
+max_actress <- actress_data[which.max(actress_data$Age),]
+```
+
+Info | Rok uzyskania Oscara  | Nazwisko | Film | Wiek 
+------------- | ------------- | ------------- | ------------- | ------------- 
+Namłodsza | `r min_actress["Year"]` | `r min_actress["Name"]` | `r min_actress["Movie"]` | `r min_actress["Age"]`
+Najstarsza | `r max_actress["Year"]` | `r max_actress["Name"]` | `r max_actress["Movie"]` | `r max_actress["Age"]`
+
+## Wykres liniowy
+
+W celu sporządzenia wykresu liniowego połączono dane uzyskane w krokach poprzednich. Do tego wykorzystano funkcję __inner_join__ (wewnętrzne złączenie) z pakietu __dplyr__. Funkcja przyjmuje dwie tabele, które chcemy złączyć oraz nazwę kolumny według której ma dojść do złączenia.
+
+Do wyświetlenia wykresu użyto biblioteki __ggplot__ przyjmująca zmienną z danymi oraz pozwaa na określenie co mają zawierać poszczególne osie. Funkcja __geom_line__ umożliwia narysowanie poszczególnych linii na wykresie.
+
+```{r linear_chart}
 merged_data <- dplyr::inner_join(actors_data, actress_data, by = "Year")
+
+names(merged_data)[names(merged_data) == "Age.x"] <- "Age_actor"
+names(merged_data)[names(merged_data) == "Age.y"] <- "Age_actress"
 
 head(merged_data)
 
 ggplot(merged_data, aes(Year)) + 
-  geom_line(aes(y = Age.x, colour = "Wiek zdobywcy Oscara")) + 
-  geom_line(aes(y = Age.y, colour = "Wiek zdobywczyni Oscara"))
+  geom_line(aes(y = Age_actor, colour = "Wiek zdobywcy Oscara")) + 
+  geom_line(aes(y = Age_actress, colour = "Wiek zdobywczyni Oscara"))
 
-boxplot(merged_data[, c("Age.x", "Age.y")])
+```
 
-#start histogram
+## Wykres pudełkowy
+
+Poniżej zaprezentowano wykres pudełkowy dla wieku. Kółkiem oznaczone są wartości odstające.
+
+```{r boxplot}
+boxplot(merged_data[, c("Age_actor", "Age_actress")])
+```
+
+## Histogram
+
+```{r histogram}
 #http://www.sthda.com/english/wiki/ggplot2-histogram-plot-quick-start-guide-r-software-and-data-visualization
 data_f <- data.frame(
   sex= "F",  
@@ -50,7 +121,6 @@ data_m <- data.frame(
 merged_data_histogram = merge(data_f, data_m, all=TRUE)
 head(merged_data_histogram)
 
-library(plyr)
 
 mu <- ddply(merged_data_histogram, "sex", summarise, grp.mean=mean(age))
 print(mu)
@@ -60,14 +130,12 @@ ggplot(merged_data_histogram, aes(x=age, fill=sex, color=sex, y=..density..)) +
   geom_vline(data=mu, aes(xintercept=grp.mean, color=sex),
              linetype="dashed")+
   geom_density(alpha=.1, fill="#FFFFFF") 
+```
 
-#end histogram
+## Zeskrobywanie danych
 
-#start web scraping
+```{r web_scraping}
 #https://www.freecodecamp.org/news/an-introduction-to-web-scraping-using-r-40284110c848/
-library(xml2)
-library(rvest)
-library(stringr)
 
 url <- "https://www.amazon.in/OnePlus-Mirror-Black-64GB-Memory/dp/B0756Z43QS?tag=googinhydr18418-21&tag=googinkenshoo-21&ascsubtag=aee9a916-6acd-4409-92ca-3bdbeb549f80"
 
@@ -75,8 +143,5 @@ webpage <-  read_html(url)
 print(webpage)
 title_html <- html_nodes(webpage, "#title")
 title <- html_text(title_html)
-head(title)
-
-#end web scraping
-
+print(gsub("[\r\n ]", "", title))
 ```
