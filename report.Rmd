@@ -107,6 +107,8 @@ boxplot(merged_data[, c("Age_actor", "Age_actress")])
 
 ## Histogram
 
+Histogram również został stworzony przy pomocy biblioteki ggplot. Histogram prezentuje w jakim wiek aktorzy i aktorki zdobywały oskara. Ponadto przy pomocy pomocy biblioteki ddply obliczona została średnia wieku dla obu płci. Na histogramie zostały również ukazane wykresy gęstości.
+
 ```{r histogram}
 #http://www.sthda.com/english/wiki/ggplot2-histogram-plot-quick-start-guide-r-software-and-data-visualization
 data_f <- data.frame(
@@ -133,6 +135,8 @@ ggplot(merged_data_histogram, aes(x=age, fill=sex, color=sex, y=..density..)) +
 ```
 
 ## Zeskrobywanie danych
+
+Web scraping w języku R można wykonywać przy pomocy biblioteki rvest. Aby z danych wyłuskać przydatne informacje użyto narzędzia xml2 oraz stringr. Niestety duże serwisy typu amazon.com posiadają zabezpieczenia przed web scrapingiem
 
 ```{r web_scraping}
 #https://www.freecodecamp.org/news/an-introduction-to-web-scraping-using-r-40284110c848/
