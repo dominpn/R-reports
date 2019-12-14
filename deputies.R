@@ -25,7 +25,7 @@ for (posel in 1:460) {
   poslowie[[id]] <- wartosci
 }
 
-pola <- c("Liczba głosów:", "Klub/koło:", "Data i miejsce urodzenia:", "Wykształcenie:", "Zawód:", "Nazwisko:")
+pola <- c("Liczba głosów:", "Klub/koło:", "Data i miejsce urodzenia:", "Wykształcenie:", "Zawód:", "Nazwisko:", "Okręg wyborczy:")
 
 dane <- list()
 for(pole in pola) {
@@ -33,7 +33,7 @@ for(pole in pola) {
 }
 
 df <- as.data.frame(dane)
-colnames(df) <- c("Glosow", "Klub", "Data", "Wyksztalcenie", "Zawod", "ImieNazwisko")
+colnames(df) <- c("Liczba.Glosow", "Klub", "Data", "Wyksztalcenie", "Zawod", "ImieNazwisko", "OkregWyborczy")
 rownames(df) <- names(poslowie)
 df$Klub <- gsub(df$Klub, pattern = "Klub Parlamentarny |Klub Poselski ", replacement="")
 df$DataUrodzenia <- gsub(df$Data, pattern = ",.*$", replacement = "")
@@ -48,7 +48,7 @@ get_gender <- function(name) {
 }
 
 poslowie <- df[,-3]
-poslowie$Glosow <- as.numeric(as.character(poslowie$Glosow))
+poslowie$Liczba.Glosow <- as.numeric(as.character(poslowie$Liczba.Glosow))
 poslowie$Klub <- factor(poslowie$Klub)
 poslowie$DataUrodzenia <- dmy(poslowie$DataUrodzenia)
 poslowie$MiejsceUrodzenia <- factor(poslowie$MiejsceUrodzenia)
