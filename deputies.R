@@ -4,7 +4,10 @@ library(lubridate)
 library(eeptools)
 library(stringi)
 library(tidyr)
-
+library(xml2)
+library(plyr)
+library(ggplot2)
+library(dplyr)
 # SCRAPING
 poslowie <- list()
 for (posel in 1:460) {
@@ -65,3 +68,67 @@ mean(as.numeric(poslowie_data$Liczba.głosów))
 table(poslowie_data$Wyksztalcenie)
 factor(poslowie_data$MiejsceUrodzenia)
 poslowie_data$Klub
+
+#CHARTS
+
+#klub poselski - liczba członków -> kolumnowy
+table_1 = table(poslowie_data$Klub)
+table_1
+df_1 = as.data.frame(table_1)
+df_1
+names(df_1)[1] = 'klub'
+names(df_1)[2] = 'liczba_poslow'
+df_1 <-df_1[order(-df_1$liczba_poslow),]
+df_1
+par(mar=c(6,4,4,4))
+barplot(df_1$liczba_poslow,names.arg=c("PiS","PO-KO","PSL", "Kukiz'15", "PN", "Konfederacja", "UPR", "PO", "KPPP", "Teraz!","","WiS","PSL-UED"),ylab="liczba posłów",col=rainbow(length(df$klub)),
+        main="Wielkość klubów poselskich",border="black",las=2)
+
+#klub poselski - plec
+df_5 <- data.frame(
+  plec=poslowie_data$Plec ,  
+  klub=poslowie_data$Klub
+)
+summary(df_5)
+
+
+#wyksztalcenie
+table_2 = table(poslowie_data$Wyksztalcenie)
+table_2
+df_2 = as.data.frame(table_2)
+df_2
+names(df_2)[1] = 'wyksztlcenie'
+names(df_2)[2] = 'liczba_poslow'
+df_2 <-df_2[order(-df_2$liczba_poslow),]
+df_2
+par(mar=c(13,4,4,4))
+barplot(df_2$liczba_poslow,names.arg=df_2$wyksztlcenie,ylab="liczba posłów",col=rainbow(length(df$klub)),
+        main="Wykształcenie posłów",border="black",las=2)
+
+#histogram wiek 
+df_3 = as.data.frame(poslowie_data$Wiek)
+head(df_3)
+names(df_3)[1] = 'wiek'
+df_3
+
+ggplot(df_3, aes(x=wiek)) + 
+  geom_histogram(color="black", fill="white") +
+  geom_vline(aes(xintercept=mean(wiek)),
+             color="blue", linetype="dashed", size=1)
+
+#histogram wiek płeć
+df_4 <- data.frame(
+  plec=poslowie_data$Plec ,  
+  wiek=poslowie_data$Wiek
+)
+head(df_4)
+
+summary(df_4)
+
+mu <- ddply(df_4, "plec", summarise, grp.mean=mean(plec))
+print(mu)
+
+ggplot(df_4, aes(x=wiek, fill=plec, color=plec)) +
+  geom_histogram( alpha=0.2, position="identity", binwidth=2) +
+  geom_vline(data=mu, aes(xintercept=grp.mean, color=plec),
+              linetype="dashed")
