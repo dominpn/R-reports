@@ -26,6 +26,7 @@ for (posel in 1:460) {
   wartosci[["Nazwisko:"]] <- nazwisko
   id <- as.character(posel)
   poslowie[[id]] <- wartosci
+  print(poslowie[[id]])
 }
 
 pola <- c("Liczba głosów:", "Klub/koło:", "Data i miejsce urodzenia:", "Wykształcenie:", "Zawód:", "Nazwisko:", "Okręg wyborczy:")
@@ -89,8 +90,17 @@ df_5 <- data.frame(
   plec=poslowie_data$Plec ,  
   klub=poslowie_data$Klub
 )
-summary(df_5)
+df_5 <- ddply(df_5, .(df_5$plec, df_5$klub), nrow)
+names(df_5) <- c("plec", "klub", "liczba_poslow")
 
+df_5 <-df_5[order(-df_5$plec),]
+df_5 <-df_5[order(-df_5$klub),]
+head(df_5)
+
+par(mar=c(13,4,4,4))
+ggplot(data=df_5, aes(x=klub, y=liczba_poslow, fill=plec)) +
+  geom_bar(stat="identity")+
+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
 
 #wyksztalcenie
 table_2 = table(poslowie_data$Wyksztalcenie)
@@ -132,3 +142,51 @@ ggplot(df_4, aes(x=wiek, fill=plec, color=plec)) +
   geom_histogram( alpha=0.2, position="identity", binwidth=2) +
   geom_vline(data=mu, aes(xintercept=grp.mean, color=plec),
               linetype="dashed")
+
+#poslowie 9
+poslowie9 <- list()
+for (posel in 371:460) {
+  strona <- read_html(paste0("http://sejm.gov.pl/sejm9.nsf/posel.xsp?id=",posel%/%100, (posel%/%10)%%10, posel %% 10))
+  nazwisko <- html_text(html_nodes(strona, "h1"))
+  print(nazwisko)
+  print(id)
+  
+  pola <- html_text(html_nodes(strona, ".data p"))
+  if (any(pola == "Wygaśnięcie mandatu:")) {
+    ind <- which(pola == "Wygaśnięcie mandatu:")
+    pola <- pola[-ind+c(0,-1)]
+    if (!grepl(pola[ind], pattern=":$"))
+      pola <- pola[-ind]
+  }
+  wartosci <- pola[seq(2, length(pola), 2)]
+  names(wartosci) <- pola[seq(1, length(pola), 2)]
+  wartosci[["Nazwisko:"]] <- nazwisko
+  id <- as.character(posel)
+  poslowie9[[id]] <- wartosci
+}
+
+pola <- c("Wybrany dnia", "Lista", "Okręg wyborczy", "Liczba głosów:", "Staż parlamentarny", "Klub/koło:", "Data i miejsce urodzenia:", "Wykształcenie:", "Ukończona szkoła:",  "Zawód:", "Email:", "Nazwisko:")
+
+dane <- list()
+for(pole in pola) {
+  dane[[pole]] <- sapply(poslowie9, function(posel) posel[pole])
+}
+
+head(poslowie9)
+
+df <- as.data.frame(dane)
+colnames(df) <- c("Liczba.Glosow", "Klub", "Data", "Wyksztalcenie", "Zawod", "ImieNazwisko", "OkregWyborczy")
+rownames(df) <- names(poslowie9)
+df$Klub <- gsub(df$Klub, pattern = "Klub Parlamentarny |Klub Poselski ", replacement="")
+df$DataUrodzenia <- gsub(df$Data, pattern = ",.*$", replacement = "")
+df$MiejsceUrodzenia <- gsub(df$Data, pattern = "^.*,.", replacement = "")
+
+
+poslowie9 <- df[,-3]
+poslowie9$Liczba.Glosow <- as.numeric(as.character(poslowie9$Liczba.Glosow))
+poslowie9$Klub <- factor(poslowie9$Klub)
+poslowie9$DataUrodzenia <- dmy(poslowie9$DataUrodzenia)
+poslowie9$MiejsceUrodzenia <- factor(poslowie9$MiejsceUrodzenia)
+poslowie9$Wiek <- floor(age_calc(poslowie9$DataUrodzenia, units = "years"))
+poslowie9$Plec <- sapply(poslowie9$ImieNazwisko,get_gender)
+write.csv(poslowie9,'deputies2.csv', row.names = TRUE)
