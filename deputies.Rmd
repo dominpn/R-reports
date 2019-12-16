@@ -1,0 +1,166 @@
+---
+title: "Posłowie"
+author: "Dominik Krystkowiak Łukasz Śmierzchalski"
+date: "15 12 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rvest)
+library(archivist)
+library(lubridate)
+library(eeptools)
+library(stringi)
+library(tidyr)
+```
+
+# Posłowie
+
+## Pobieranie danych z Internetu - modyfikacja skryptu
+
+W skrypcie dokonano następujących zmian:
+
+- dodano wyciąganie danych związanych z okręgiem wyborczym
+
+``` {r change1, eval = FALSE}
+pola <- c("Liczba głosów:", "Klub/koło:", "Data i miejsce urodzenia:", "Wykształcenie:", "Zawód:", "Nazwisko:", "Okręg wyborczy:")
+
+colnames(df) <- c("Liczba.Glosow", "Klub", "Data", "Wyksztalcenie", "Zawod", "ImieNazwisko", "OkregWyborczy")
+```
+
+- poprawiono wyciąganie wieku na podstawie datu urodzenia; w tym celu użyto funkcji __age_calc__, następnie uzyskany rezultat zaokrąglono w dół za pomocą funkcji __floor__
+
+``` {r change2, eval = FALSE}
+poslowie$Wiek <- floor(age_calc(poslowie$DataUrodzenia, units = "years"))
+```
+
+- dodano wyciąganie danych na temat płci na podstawie imienia; w tym celu stworzono funcję __get_gender__, która dzieli ciąg znaków według spacji ( __strsplit__), następnie z 1 elementu tablicy brany jest ostatni znak ( __stri_sub__), jeżeli jest to literka "a" jest to kobieta w przeciwnym razie mężczyzna
+
+``` {r change3, eval = FALSE}
+get_gender <- function(name) {
+  if (all(stri_sub(unlist(strsplit(toString(name), " "))[1], -1, -1) == "a")) {
+    return("K")
+  } else {
+    return("M")
+  }
+}
+
+poslowie$Plec <- sapply(poslowie$ImieNazwisko,get_gender)
+```
+
+- uzyskany wynik zostaje zapisany do pliku CSV w celu zapobiegnięcia ciągłemu pobierania danych ze strony (ciągłe odpytywanie prowadzi do tymczasowego zablokowanie adresu - kod błędu 403 Forbidden)
+
+``` {r change4, eval = FALSE}
+write.csv(poslowie,'deputies.csv', row.names = TRUE)
+```
+
+Efekt końcowy
+
+```{r scraping, eval=FALSE}
+poslowie <- list()
+for (posel in 1:460) {
+  strona <- read_html(paste0("http://sejm.gov.pl/sejm8.nsf/posel.xsp?id=",posel%/%100, (posel%/%10)%%10, posel %% 10))
+  nazwisko <- html_text(html_nodes(strona, "h1"))
+  
+  pola <- html_text(html_nodes(strona, ".data p"))
+  if (any(pola == "Wygaśnięcie mandatu:")) {
+    ind <- which(pola == "Wygaśnięcie mandatu:")
+    pola <- pola[-ind+c(0,-1)]
+    if (!grepl(pola[ind], pattern=":$"))
+      pola <- pola[-ind]
+  }
+  wartosci <- pola[seq(2, length(pola), 2)]
+  names(wartosci) <- pola[seq(1, length(pola), 2)]
+  wartosci[["Nazwisko:"]] <- nazwisko
+  id <- as.character(posel)
+  poslowie[[id]] <- wartosci
+}
+
+pola <- c("Liczba głosów:", "Klub/koło:", "Data i miejsce urodzenia:", "Wykształcenie:", "Zawód:", "Nazwisko:", "Okręg wyborczy:")
+
+dane <- list()
+for(pole in pola) {
+  dane[[pole]] <- sapply(poslowie, function(posel) posel[pole])
+}
+
+df <- as.data.frame(dane)
+colnames(df) <- c("Liczba.Glosow", "Klub", "Data", "Wyksztalcenie", "Zawod", "ImieNazwisko", "OkregWyborczy")
+rownames(df) <- names(poslowie)
+df$Klub <- gsub(df$Klub, pattern = "Klub Parlamentarny |Klub Poselski ", replacement="")
+df$DataUrodzenia <- gsub(df$Data, pattern = ",.*$", replacement = "")
+df$MiejsceUrodzenia <- gsub(df$Data, pattern = "^.*,.", replacement = "")
+
+get_gender <- function(name) {
+  if (all(stri_sub(unlist(strsplit(toString(name), " "))[1], -1, -1) == "a")) {
+    return("K")
+  } else {
+    return("M")
+  }
+}
+
+poslowie <- df[,-3]
+poslowie$Liczba.Glosow <- as.numeric(as.character(poslowie$Liczba.Glosow))
+poslowie$Klub <- factor(poslowie$Klub)
+poslowie$DataUrodzenia <- dmy(poslowie$DataUrodzenia)
+poslowie$MiejsceUrodzenia <- factor(poslowie$MiejsceUrodzenia)
+poslowie$Wiek <- floor(age_calc(poslowie$DataUrodzenia, units = "years"))
+poslowie$Plec <- sapply(poslowie$ImieNazwisko,get_gender)
+write.csv(poslowie,'deputies.csv', row.names = TRUE)
+```
+
+## Opis funkcji
+
+- __list__() - utworzenie listy
+
+- __read_html__(file) - odczytanie zawartości pliku .html
+
+    - file - ścieżka do pliku .html
+
+- __paste0__() - konkatenacja serii ciągów znaków bez żadnego separatora
+
+- __html_nodes__(document, node) - wyciągncięcie z dokumentu podanego węzła
+    - document - zawartość .html
+    - node - jaki węzeł jest poszukiwany
+
+- __html_text__() - wyciągniecie wartości danego tagu, w przypadku skryptu powyżej szukamy klasy data oraz wyciągamy wszystkie wartości znajdujące się w znaczniku <p>
+
+- __any__() - sprawdzane jest czy jakiś warunek podany w funkcji równa się TRUE
+
+- __which__() - zwracana są indeksy wektora, które spełniają warunek
+
+- __length__() - zwracana jest długość zmiennej
+
+- __grepl__() - zwraca prawdę jeżeli ciąg znaków zawiera podany wzorzec
+
+- __sapply__(x, fun) - zastosowanie podanej funkcji (fun) dla listy, wektora lub ramki danych (x)
+
+- __c__() - łączy podane argumenty w wektor
+
+- __gsub__() - zamiana znaków spełniających wzorzec
+
+- __toString__() - konwersja danej na typ string
+
+- __strsplit__() - podział łańcucha znaków według separatora
+
+- __unlist__() - zamiana listy na wektor
+
+- __stri_sub__() - pozwala na wydzielenie podciągu z ciągu znaków
+
+- __all__() - zwraca TRUE, jeżeli wszystkie warunki logiczne są prawdziwe
+
+- __as.numeric__() - konwersja na typ numeryczny
+
+- __as.character__() - konwersja na typ znakowy
+
+- __as.data.frame__() - konwersja na ramkę danych
+
+- __factor__() - zmiana wektora na czynniki
+
+- __dmy__() - parsowanie daty na dzień, miesiąc, rok
+
+- __floor__() - zaokrąglenie w dół
+
+- __age_calc__() - wylicza czas pomiędzy dwiema datami
+
+- __write.csv__() - zapis ramki danych do pliku csv
