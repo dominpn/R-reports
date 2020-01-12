@@ -13,6 +13,11 @@ library(lubridate)
 library(eeptools)
 library(stringi)
 library(tidyr)
+
+library(xml2)
+library(plyr)
+library(ggplot2)
+library(dplyr)
 ```
 
 # Posłowie
@@ -164,3 +169,92 @@ write.csv(poslowie,'deputies.csv', row.names = TRUE)
 - __age_calc__() - wylicza czas pomiędzy dwiema datami
 
 - __write.csv__() - zapis ramki danych do pliku csv
+
+##Wykresy
+
+```{r charts, eval=TRUE, message=FALSE, warning=FALSE}
+
+# ANALYSIS
+poslowie_data <- read.table(file = "deputies.csv", sep=",", header=TRUE)
+head(poslowie_data)
+#summary(poslowie_data)
+
+#mean(as.numeric(poslowie_data$Liczba.głosów))
+#table(poslowie_data$Wyksztalcenie)
+#factor(poslowie_data$MiejsceUrodzenia)
+#poslowie_data$Klub
+
+#CHARTS
+
+#klub poselski - liczba członków -> kolumnowy
+table_1 = table(poslowie_data$Klub)
+df_1 = as.data.frame(table_1)
+names(df_1)[1] = 'klub'
+names(df_1)[2] = 'liczba_poslow'
+df_1 <-df_1[order(-df_1$liczba_poslow),]
+par(mar=c(6,4,4,4))
+barplot(df_1$liczba_poslow,names.arg=c("PiS","PO-KO","PSL", "Kukiz'15", "PN", "Konfederacja", "UPR", "PO", "KPPP", "Teraz!","","WiS","PSL-UED"),ylab="liczba posłów",col=rainbow(length(df_1$klub)),
+        main="Wielkość klubów poselskich",border="black",las=2)
+
+```
+Partia rządząca oraz największa partia opozycyjna posiadają wielu członków, pozostałe kluby są małe.
+```{r charts2, eval=TRUE, message=FALSE, warning=FALSE}
+#klub poselski - plec
+df_5 <- data.frame(
+  plec=poslowie_data$Plec ,  
+  klub=poslowie_data$Klub
+)
+df_5 <- ddply(df_5, .(df_5$plec, df_5$klub), nrow)
+names(df_5) <- c("plec", "klub", "liczba_poslow")
+
+df_5 <-df_5[order(-df_5$plec),]
+df_5 <-df_5[order(-df_5$klub),]
+
+par(mar=c(13,4,4,4))
+ggplot(data=df_5, aes(x=klub, y=liczba_poslow, fill=plec)) +
+  geom_bar(stat="identity")+
+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))+ 
+  ggtitle("Płeć a klub poselski")
+```
+Kobiety stanowią mniejszość wśród praktycznie wszystkich klubów poselskich.
+```{r charts3, eval=TRUE, message=FALSE, warning=FALSE}
+#wyksztalcenie
+table_2 = table(poslowie_data$Wyksztalcenie)
+df_2 = as.data.frame(table_2)
+names(df_2)[1] = 'wyksztlcenie'
+names(df_2)[2] = 'liczba_poslow'
+df_2 <-df_2[order(-df_2$liczba_poslow),]
+par(mar=c(13,4,4,4))
+barplot(df_2$liczba_poslow,names.arg=df_2$wyksztlcenie,ylab="liczba posłów",col=rainbow(length(df_2$wyksztlcenie)),
+        main="Wykształcenie posłów",border="black",las=2)
+```
+Wykształcenie wyższe posiada znaczna większość posłów. 
+Ciekawostka - Z 400 najbogatszych Amerykanów tylko około 130 posiada formalne wykształcenie z czego aż 63 osoby tylko średnie.
+```{r charts4, eval=TRUE, message=FALSE, warning=FALSE}
+#histogram wiek 
+df_3 = as.data.frame(poslowie_data$Wiek)
+names(df_3)[1] = 'wiek'
+
+ggplot(df_3, aes(x=wiek)) + 
+  geom_histogram(color="black", fill="white") +
+  geom_vline(aes(xintercept=mean(wiek)),
+             color="blue", linetype="dashed", size=1)+ 
+  ggtitle("Histogram wieku posłów")
+```
+
+```{r charts5, eval=TRUE, message=FALSE, warning=FALSE}
+#histogram wiek płeć
+df_4 <- data.frame(
+  plec=poslowie_data$Plec ,  
+  wiek=poslowie_data$Wiek
+)
+
+mu <- ddply(df_4, "plec", summarise, grp.mean=mean(plec))
+
+ggplot(df_4, aes(x=wiek, fill=plec, color=plec)) +
+  geom_histogram( alpha=0.2, position="identity", binwidth=2) +
+  geom_vline(data=mu, aes(xintercept=grp.mean, color=plec),
+              linetype="dashed")+ 
+  ggtitle("Histogram wiek a płeć posłów")
+
+```
