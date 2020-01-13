@@ -51,7 +51,14 @@ predictions <- predict(nb, x_test)
 confusionMatrix(predictions, y_test)
 ```
 
-# Zakup komputera
+##DTX
+
+![zad1_1](dtx/zad1_1.PNG)
+![zad1_2](dtx/zad1_2.PNG)
+![zad1_3](dtx/zad1_3.PNG)
+
+
+# Klasyfikacja samochodów
 
 ## Wczytanie danych
 
@@ -89,3 +96,9 @@ y_test <- test[,8]
 predictions <- predict(nb, x_test)
 confusionMatrix(predictions, y_test)
 ```
+
+##DTX
+
+![zad2_1](dtx/zad2_1.PNG)
+![zad2_2](dtx/zad1_2.PNG)
+![zad2_3](dtx/zad2_3.PNG)
