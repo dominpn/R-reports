@@ -44,3 +44,19 @@ inspect(rules_conf)
 
 plot(head(sort(rules, by="lift"), 10),  method="graph", control=list(cex=.7))
 ```
+
+## DMX
+
+![zad2_1](dtx/zad3_0.PNG)
+
+![zad2_2](dtx/zad3_1.PNG)
+
+![zad2_2](dtx/zad3_2.PNG)
+
+![zad2_2](dtx/zad3_3.PNG)
+
+![zad2_2](dtx/zad3_4.PNG)
+
+![zad2_2](dtx/zad3_5.PNG)
+
+![zad2_2](dtx/zad3_6.PNG)
